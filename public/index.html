@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#070b12">
+<title>Product Care Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  // Apply the saved theme before the page paints, so there is no flash.
+  try { if (localStorage.getItem("pca-theme") === "light") document.documentElement.dataset.theme = "light"; } catch (e) {}
+</script>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #070b12;
+    --glow: #12233b;
+    --panel: #0e1623;
+    --panel2: #131d2e;
+    --line: rgba(255, 255, 255, .09);
+    --ink: #eaf0f7;
+    --muted: #93a3b5;
+    --accent: #62c7ff;
+    --accent-ink: #04121f;
+    --ok: #3ddc97;
+    --warn: #f2b84b;
+    --bad: #ff7a6b;
+    --paper: #fbf6e6;
+    --paper-ink: #2b2416;
+    --paper-muted: #7a6f4f;
+    --paper-line: #d8cca0;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #e8edf2;
+    --glow: #d4e2f3;
+    --panel: #ffffff;
+    --panel2: #f1f5f9;
+    --line: rgba(15, 28, 38, .12);
+    --ink: #0f1c26;
+    --muted: #566674;
+    --accent: #1f4fd8;
+    --accent-ink: #ffffff;
+    --ok: #108a5a;
+    --warn: #9a6200;
+    --bad: #c23b2c;
+    --paper: #fff8e1;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font: 16px/1.5 Manrope, "Segoe UI Variable", "Avenir Next", system-ui, sans-serif;
+    background: radial-gradient(900px 500px at 12% -10%, var(--glow) 0%, transparent 62%), var(--bg);
+  }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+
+  .app {
+    display: grid;
+    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+    gap: 20px;
+    height: 100dvh;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* ---------- Small shared controls ---------- */
+  .icon-sm {
+    width: 34px; height: 34px; flex: none;
+    display: grid; place-items: center;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; cursor: pointer;
+  }
+  .icon-sm:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+  .icon-sm svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .small-btn {
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 12px; font-size: .8rem; font-weight: 600; cursor: pointer;
+  }
+  .small-btn:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+  .linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; font-size: .85rem; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .led { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .led.on { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+  .led.off { background: var(--bad); }
+  .led.warn { background: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 25%, transparent); }
+
+  /* ---------- Left column ---------- */
+  .stage { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; }
+
+  .orb-card {
+    flex: none;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 24px;
+    padding: 10px 14px 12px; text-align: center;
+  }
+  #orb { display: block; width: 100%; max-width: 176px; aspect-ratio: 1; margin: 0 auto; }
+  .orb-label { margin: 0; display: flex; justify-content: center; align-items: center; gap: 10px; font-size: .88rem; color: var(--muted); min-height: 1.5em; }
+
+  .overview { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stat {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 9px 10px; text-align: left;
+  }
+  button.stat { cursor: pointer; }
+  button.stat:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+  .stat b { font-size: 1.15rem; line-height: 1.1; font-weight: 700; }
+  .stat span { font-size: .7rem; color: var(--muted); }
+  .stat.soon b { color: var(--warn); }
+  .stat.ended b { color: var(--bad); }
+
+  .products { flex: 1; min-height: 220px; display: flex; flex-direction: column; gap: 10px; }
+  .products-head { display: flex; align-items: center; justify-content: space-between; }
+  .products h2 { margin: 0; font-size: .95rem; font-weight: 600; color: var(--muted); }
+  #search {
+    width: 100%; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 8px 12px; font-size: .9rem;
+  }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 3px 11px; font-size: .8rem; cursor: pointer;
+  }
+  .filter[aria-pressed="true"] { background: var(--accent); border-color: transparent; color: var(--accent-ink); font-weight: 600; }
+
+  .cards { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-bottom: 4px; min-height: 0; }
+  .empty { margin: 0; color: var(--muted); font-size: .9rem; }
+
+  .card {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 10px 12px; cursor: pointer;
+  }
+  .card:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+  .card.skel { cursor: default; height: 76px; animation: shimmer 1.4s infinite ease-in-out; }
+  @keyframes shimmer { 0%, 100% { opacity: .45; } 50% { opacity: .9; } }
+  .ring {
+    --p: 0; --c: var(--ok);
+    position: relative; flex: none; width: 56px; height: 56px; border-radius: 50%;
+    background: conic-gradient(var(--c) calc(var(--p) * 360deg), color-mix(in srgb, var(--muted) 30%, transparent) 0);
+    display: grid; place-content: center; text-align: center; line-height: 1;
+  }
+  .ring::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--panel); }
+  .ring b, .ring i { position: relative; font-style: normal; }
+  .ring b { font-size: .95rem; font-weight: 700; }
+  .ring i { font-size: .6rem; color: var(--muted); margin-top: 2px; }
+  .ring.ended b { color: var(--bad); }
+  .meta { min-width: 0; }
+  .meta strong { display: block; font-size: .95rem; font-weight: 600; overflow-wrap: anywhere; }
+  .meta small { color: var(--muted); font-size: .8rem; }
+
+  /* ---------- Chat ---------- */
+  .chat {
+    display: flex; flex-direction: column; min-height: 0; min-width: 0;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 0 18px;
+  }
+  .chat-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 16px 0 12px; border-bottom: 1px solid var(--line); }
+  .chat-head h1 { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--muted); }
+  .tools { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; font-size: .85rem; color: var(--muted); }
+  .tools label { display: flex; align-items: center; gap: 6px; }
+  .tools input { accent-color: var(--accent); }
+  select { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+
+  .banner {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px;
+    margin-top: 12px; padding: 8px 12px; font-size: .9rem;
+    background: color-mix(in srgb, var(--warn) 12%, var(--panel2));
+    border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: 12px;
+  }
+  .banner .icon-sm { margin-left: auto; width: 28px; height: 28px; background: transparent; border: 0; }
+
+  #log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 18px 0; }
+  .msg { display: flex; animation: rise .18s ease-out; }
+  .msg.user { justify-content: flex-end; }
+  .col { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; max-width: min(86%, 62ch); }
+  .col .bubble { max-width: 100%; }
+  .bubble {
+    max-width: min(86%, 62ch);
+    padding: 10px 14px; border: 1px solid var(--line); border-radius: 16px 16px 16px 4px;
+    background: var(--panel2); white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .user .bubble { background: var(--accent); color: var(--accent-ink); border-color: transparent; border-radius: 16px 16px 4px 16px; font-weight: 500; }
+  .copy { background: none; border: 0; padding: 0 4px; font-size: .75rem; color: var(--muted); cursor: pointer; }
+  .copy:hover { color: var(--ink); }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .typing { display: inline-flex; gap: 5px; padding: 14px; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite ease-in-out; }
+  .typing i:nth-child(2) { animation-delay: .2s; }
+  .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+  /* Approval slip: a warranty-card style slip, the one bright object on the page. */
+  .slip { position: relative; width: min(100%, 420px); background: var(--paper); color: var(--paper-ink); border-radius: 8px; padding: 14px 16px 12px; }
+  .slip::before, .slip::after { content: ""; position: absolute; top: 54px; width: 16px; height: 16px; border-radius: 50%; background: var(--panel); }
+  .slip::before { left: -8px; }
+  .slip::after { right: -8px; }
+  .slip-head { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .slip-head .led { background: #e0a128; box-shadow: 0 0 0 4px rgba(224, 161, 40, .3); }
+  .slip.done .slip-head .led { background: #1fa971; box-shadow: 0 0 0 4px rgba(31, 169, 113, .25); }
+  .slip.cancelled .slip-head .led { background: #8a8468; box-shadow: none; }
+  .slip-action { margin: 2px 0 0 17px; color: var(--paper-muted); font-size: .9rem; text-transform: capitalize; }
+  .slip dl { margin: 22px 0 12px; padding-top: 12px; border-top: 2px dashed var(--paper-line); display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: .93rem; }
+  .slip dt { color: var(--paper-muted); }
+  .slip dd { margin: 0; overflow-wrap: anywhere; }
+  .slip-btns { display: flex; gap: 8px; }
+  .btn { border: 1px solid var(--paper-line); background: #fff; color: var(--paper-ink); border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+  .btn.primary { background: #0f1c26; color: #fff; border-color: transparent; font-weight: 700; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .slip-result { margin: 0; font-size: .9rem; color: var(--paper-muted); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 10px; }
+  .chip { border: 1px solid var(--line); background: var(--panel2); border-radius: 999px; padding: 6px 12px; font-size: .85rem; cursor: pointer; }
+  .chip:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+
+  form.composer { display: flex; gap: 8px; }
+  #input { flex: 1; min-width: 0; background: var(--panel2); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .icon-btn { width: 48px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; display: grid; place-items: center; }
+  .icon-btn.send { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
+  .icon-btn:disabled, #input:disabled { opacity: .5; cursor: default; }
+  .icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #mic.live { border-color: var(--bad); color: var(--bad); animation: pulse 1.3s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 45%, transparent); } 100% { box-shadow: 0 0 0 12px transparent; } }
+  .fine { margin: 8px 0 14px; font-size: .75rem; color: var(--muted); }
+
+  /* ---------- Detail panel and add form ---------- */
+  dialog { color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 0; }
+  dialog::backdrop { background: rgba(3, 8, 14, .6); backdrop-filter: blur(3px); }
+  dialog.drawer { margin: 0 0 0 auto; height: 100dvh; max-height: 100dvh; width: min(430px, 100%); border-radius: 24px 0 0 24px; }
+  dialog.drawer[open] { animation: slide .22s ease-out; }
+  @keyframes slide { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  dialog.modal { width: min(540px, calc(100% - 32px)); border-radius: 20px; }
+  .dbody { padding: 20px; overflow-y: auto; max-height: 100dvh; }
+  .dhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .dhead h2 { margin: 0; font-size: 1.2rem; font-weight: 700; letter-spacing: -.01em; }
+  .dhead p { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
+
+  .tl { --c: var(--ok); position: relative; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 30%, transparent); margin: 18px 0 8px; }
+  .tl-fill { height: 100%; border-radius: 999px; background: var(--c); }
+  .tl-dot { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%; background: var(--panel); border: 3px solid var(--c); transform: translate(-50%, -50%); }
+  .tl-labels { display: flex; justify-content: space-between; gap: 8px; font-size: .78rem; color: var(--muted); }
+  .tl-status { margin: 10px 0 0; font-weight: 700; color: var(--c); }
+  .facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 18px 0; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: .93rem; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; overflow-wrap: anywhere; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .act { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; text-align: left; cursor: pointer; font-size: .9rem; font-weight: 500; }
+  .act:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fields label { display: grid; gap: 4px; font-size: .82rem; color: var(--muted); }
+  .fields .span2 { grid-column: 1 / -1; }
+  .fields input, .fields select { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; color: var(--ink); width: 100%; }
+  .hint { color: var(--muted); font-size: .82rem; margin: 12px 0; }
+  .row { display: flex; justify-content: flex-end; gap: 8px; }
+  .btn-main { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px; padding: 10px 18px; font-weight: 700; cursor: pointer; }
+  .btn-ghost { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 18px; cursor: pointer; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px;
+    font-size: .85rem; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  #toast.show { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .msg, .typing i, #mic.live, .card.skel, dialog.drawer[open] { animation: none; }
+    #toast { transition: none; }
+  }
+
+  /* ---------- Phones and narrow windows ---------- */
+  @media (max-width: 860px) {
+    .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px; padding: 12px 16px; }
+    .stage { flex-direction: row; align-items: center; gap: 12px; overflow: visible; }
+    .orb-card { width: 104px; padding: 6px; border-radius: 18px; }
+    #orb { max-width: 92px; }
+    .orb-label { font-size: .68rem; min-height: 0; }
+    .overview, .products-head, #search, .filters { display: none; }
+    .products { min-width: 0; min-height: 0; }
+    .cards { flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+    .card { width: auto; min-width: 210px; }
+    .tools { margin-left: 0; width: 100%; justify-content: space-between; }
+    .fields { grid-template-columns: 1fr; }
+    dialog.drawer { border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="stage">
+    <div class="orb-card">
+      <canvas id="orb" aria-hidden="true"></canvas>
+      <p class="orb-label"><span id="orbLabel" role="status">Ready</span><button type="button" class="linkbtn" id="stopSpeak" hidden>Stop</button></p>
+    </div>
+
+    <section class="overview" aria-label="Overview">
+      <button type="button" class="stat" data-filter="all"><b id="stProducts">-</b><span>Products</span></button>
+      <button type="button" class="stat soon" data-filter="soon"><b id="stSoon">-</b><span>Ending soon</span></button>
+      <button type="button" class="stat ended" data-filter="ended"><b id="stEnded">-</b><span>Ended</span></button>
+      <div class="stat"><b id="stValue">-</b><span>Total value</span></div>
+    </section>
+
+    <section class="products" aria-label="My products">
+      <div class="products-head">
+        <h2>My products</h2>
+        <button type="button" class="small-btn" id="addBtn">Add product</button>
+      </div>
+      <input id="search" type="search" placeholder="Search products" aria-label="Search products">
+      <div class="filters" role="group" aria-label="Filter products">
+        <button type="button" class="filter" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" class="filter" data-filter="soon" aria-pressed="false">Ending soon</button>
+        <button type="button" class="filter" data-filter="ended" aria-pressed="false">Ended</button>
+      </div>
+      <div class="cards" id="cards"></div>
+    </section>
+  </aside>
+
+  <section class="chat">
+    <header class="chat-head">
+      <h1>Product Care Assistant</h1>
+      <span class="pill"><span class="led" id="led"></span><span id="status">Connecting</span></span>
+      <div class="tools">
+        <label>Language
+          <select id="lang" aria-label="Voice language">
+            <option value="en-IN">English</option>
+            <option value="hi-IN">Hindi</option>
+            <option value="te-IN">Telugu</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="speak"> Read aloud</label>
+        <button type="button" class="icon-sm" id="newChat" title="New chat" aria-label="New chat">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button type="button" class="icon-sm" id="exportChat" title="Save chat as a text file" aria-label="Save chat as a text file">
+          <svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>
+        </button>
+        <button type="button" class="icon-sm" id="themeBtn" title="Switch light or dark theme" aria-label="Switch light or dark theme">
+          <svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="banner" id="banner" hidden>
+      <span class="led warn" aria-hidden="true"></span>
+      <span id="bannerText"></span>
+      <button type="button" class="linkbtn" id="bannerDetails">Details</button>
+      <button type="button" class="linkbtn" id="bannerClaim">Draft a claim</button>
+      <button type="button" class="icon-sm" id="bannerClose" aria-label="Dismiss">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <main id="log" aria-live="polite"></main>
+
+    <div class="chips" id="chips"></div>
+
+    <form class="composer" id="form" autocomplete="off">
+      <input id="input" type="text" placeholder="Ask about a product, warranty or service" aria-label="Message" maxlength="2000">
+      <button type="button" class="icon-btn" id="mic" aria-label="Speak your message">
+        <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <button type="submit" class="icon-btn send" id="send" aria-label="Send">
+        <svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+      </button>
+    </form>
+    <p class="fine">Service requests and appointments are simulated for this demo. Press / to jump to the message box.</p>
+  </section>
+</div>
+
+<dialog id="detail" class="drawer" aria-labelledby="dTitle">
+  <div class="dbody">
+    <div class="dhead">
+      <div><h2 id="dTitle"></h2><p id="dSub"></p></div>
+      <button type="button" class="icon-sm" id="dClose" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div id="dTimeline"></div>
+    <dl class="facts" id="dFacts"></dl>
+    <div class="actions" id="dActions"></div>
+  </div>
+</dialog>
+
+<dialog id="addDlg" class="modal" aria-labelledby="aTitle">
+  <form id="addForm" class="dbody" method="dialog">
+    <div class="dhead">
+      <h2 id="aTitle">Add a product</h2>
+      <button type="button" class="icon-sm" id="aClose" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="fields">
+      <label class="span2">Product name<input name="name" required maxlength="80" placeholder="Split AC 1.5 ton"></label>
+      <label>Brand<input name="brand" required maxlength="60"></label>
+      <label>Category
+        <select name="category">
+          <option>Air conditioner</option><option>Refrigerator</option><option>Washing machine</option>
+          <option>Television</option><option>Laptop</option><option>Phone</option>
+          <option>Water purifier</option><option>General</option>
+        </select>
+      </label>
+      <label>Purchase date<input type="date" name="date" required></label>
+      <label>Price (rupees)<input type="number" name="price" required min="0" step="1" inputmode="numeric"></label>
+      <label>Warranty (months)<input type="number" name="months" required min="0" max="120" step="1" value="12"></label>
+      <label>Model number (optional)<input name="model" maxlength="60"></label>
+      <label class="span2">Serial number (optional)<input name="serial" maxlength="60"></label>
+    </div>
+    <p class="hint">You will see an approval card before anything is saved.</p>
+    <div class="row">
+      <button type="button" class="btn-ghost" id="aCancel">Cancel</button>
+      <button type="submit" class="btn-main">Review and add</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const log = $("log"), form = $("form"), input = $("input"), sendBtn = $("send"), micBtn = $("mic");
+const langSel = $("lang"), speakChk = $("speak"), chipsBox = $("chips"), cardsBox = $("cards");
+const orbLabel = $("orbLabel"), statusText = $("status"), led = $("led"), stopBtn = $("stopSpeak");
+const detail = $("detail"), addDlg = $("addDlg"), toastEl = $("toast");
+
+let sessionId = null;
+let busy = false, awaitingApproval = false, recording = false, speaking = false, lastWasVoice = false;
+let allProducts = [], filter = "all", query = "", dismissedBanner = null;
+const transcript = [];
+try { sessionId = sessionStorage.getItem("pca-session"); } catch (e) {}
+
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const theme = () => document.documentElement.dataset.theme === "light" ? "light" : "dark";
+
+function showToast(text) {
+  toastEl.textContent = text;
+  toastEl.classList.add("show");
+  clearTimeout(showToast.t);
+  showToast.t = setTimeout(() => toastEl.classList.remove("show"), 2200);
+}
+
+/* =========================================================
+   3D orb: a point sphere rotated and projected by hand.
+   ========================================================= */
+const MOTION = {
+  idle:      { spin: .0022, amp: .025, speed: 1.2, pulse: .010, label: "Ready" },
+  listening: { spin: .004,  amp: .07,  speed: 3.2, pulse: .050, label: "Listening" },
+  thinking:  { spin: .016,  amp: .09,  speed: 5.5, pulse: .020, label: "Thinking" },
+  speaking:  { spin: .007,  amp: .13,  speed: 7.5, pulse: .030, label: "Speaking" },
+  approval:  { spin: .0025, amp: .035, speed: 1.6, pulse: .015, label: "Waiting for your approval" }
+};
+const PALETTE = {
+  dark:  { idle: [150, 205, 255], listening: [110, 225, 255], thinking: [175, 185, 255], speaking: [140, 235, 255], approval: [255, 201, 112] },
+  light: { idle: [31, 79, 216],   listening: [0, 130, 200],   thinking: [95, 70, 200],    speaking: [0, 120, 190],    approval: [196, 120, 0] }
+};
+
+const canvas = $("orb");
+const ctx = canvas.getContext("2d");
+const POINTS = 1000;
+const pts = [];
+for (let i = 0; i < POINTS; i++) {
+  const y = 1 - (i / (POINTS - 1)) * 2;
+  const r = Math.sqrt(1 - y * y);
+  const th = Math.PI * (3 - Math.sqrt(5)) * i;
+  pts.push({ x: Math.cos(th) * r, y, z: Math.sin(th) * r, seed: Math.random() * 6.28 });
+}
+
+function paramsFor(name) {
+  const m = MOTION[name], c = PALETTE[theme()][name];
+  return { spin: reduce ? 0 : m.spin, amp: reduce ? 0 : m.amp, speed: m.speed, pulse: reduce ? 0 : m.pulse, r: c[0], g: c[1], b: c[2] };
+}
+
+let W = 0, H = 0, dpr = 1;
+let rot = 0.6, tiltX = 0.25, tiltY = 0, aimX = 0.25, aimY = 0;
+let cur = paramsFor("idle");
+let target = cur;
+let orbName = "idle";
+
+function setOrb(name) {
+  orbName = name;
+  target = paramsFor(name);
+  orbLabel.textContent = MOTION[name].label;
+  if (reduce) { cur = { ...target }; draw(0); }
+}
+
+function refreshOrb() {
+  stopBtn.hidden = !speaking;
+  setOrb(recording ? "listening" : busy ? "thinking" : speaking ? "speaking" : awaitingApproval ? "approval" : "idle");
+}
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  if (reduce) draw(0);
+}
+
+const buckets = [[], [], [], []];
+
+function draw(t) {
+  if (!W) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const time = t / 1000;
+  const cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) * 0.38 * (1 + cur.pulse * Math.sin(time * 5));
+  const col = `${Math.round(cur.r)},${Math.round(cur.g)},${Math.round(cur.b)}`;
+
+  const glow = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, R * 1.45);
+  glow.addColorStop(0, `rgba(${col},${theme() === "light" ? ".10" : ".16"})`);
+  glow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  const cosY = Math.cos(rot), sinY = Math.sin(rot);
+  const cosX = Math.cos(tiltX), sinX = Math.sin(tiltX);
+  const scale = R / 110;
+  buckets.forEach((b) => (b.length = 0));
+
+  for (const p of pts) {
+    const k = 1 + Math.sin(p.y * 5 + time * cur.speed + p.seed * 0.3) * cur.amp;
+    const x = p.x * k, y = p.y * k, z = p.z * k;
+    const x1 = x * cosY + z * sinY;
+    const z1 = -x * sinY + z * cosY;
+    const y1 = y * cosX - z1 * sinX;
+    const z2 = y * sinX + z1 * cosX;
+    const persp = 2.6 / (2.6 - z2);
+    const depth = (z2 + 1.2) / 2.4;
+    const size = (0.6 + depth * 1.5) * scale;
+    buckets[Math.max(0, Math.min(3, Math.floor(depth * 4)))].push(cx + x1 * R * persp, cy - y1 * R * persp, size);
+  }
+
+  for (let b = 0; b < 4; b++) {
+    const list = buckets[b];
+    ctx.fillStyle = `rgba(${col},${(0.16 + b * 0.28).toFixed(2)})`;
+    ctx.beginPath();
+    for (let i = 0; i < list.length; i += 3) {
+      ctx.moveTo(list[i] + list[i + 2], list[i + 1]);
+      ctx.arc(list[i], list[i + 1], list[i + 2], 0, 6.2832);
+    }
+    ctx.fill();
+  }
+}
+
+function loop(t) {
+  for (const key of ["spin", "amp", "speed", "pulse", "r", "g", "b"]) cur[key] += (target[key] - cur[key]) * 0.06;
+  rot += cur.spin;
+  tiltX += (aimX - tiltX) * 0.05;
+  tiltY += (aimY - tiltY) * 0.05;
+  draw(t);
+  requestAnimationFrame(loop);
+}
+
+new ResizeObserver(resize).observe(canvas);
+resize();
+if (!reduce) {
+  requestAnimationFrame(loop);
+  window.addEventListener("pointermove", (e) => {
+    aimY = (e.clientX / innerWidth - 0.5) * 0.5;
+    aimX = 0.25 + (e.clientY / innerHeight - 0.5) * 0.4;
+  }, { passive: true });
+} else {
+  draw(0);
+}
+
+/* =========================================================
+   Theme
+   ========================================================= */
+$("themeBtn").addEventListener("click", () => {
+  const next = theme() === "light" ? "dark" : "light";
+  if (next === "light") document.documentElement.dataset.theme = "light";
+  else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem("pca-theme", next); } catch (e) {}
+  setOrb(orbName);
+});
+
+/* =========================================================
+   Products: warranty maths, overview, filters, cards
+   ========================================================= */
+const todayISO = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+const dayNum = (iso) => Date.parse(iso + "T00:00:00Z") / 86400000;
+
+function addMonths(iso, months) {
+  const d = new Date(iso + "T00:00:00Z");
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, last));
+  return d.toISOString().slice(0, 10);
+}
+
+function warrantyOf(p) {
+  const expiry = addMonths(p.purchaseDate, p.warrantyMonths);
+  const left = Math.round(dayNum(expiry) - dayNum(todayISO()));
+  const total = Math.max(1, Math.round(dayNum(expiry) - dayNum(p.purchaseDate)));
+  const colour = left <= 30 ? "var(--bad)" : left <= 90 ? "var(--warn)" : "var(--ok)";
+  return { expiry, left, total, fraction: Math.max(0, Math.min(1, left / total)), colour };
+}
+
+const prettyDate = (iso) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const rupees = (n) => "₹" + Number(n || 0).toLocaleString("en-IN");
+
+function note(text) {
+  const p = document.createElement("p");
+  p.className = "empty";
+  p.textContent = text;
+  return p;
+}
+
+function updateStats() {
+  const info = allProducts.map(warrantyOf);
+  $("stProducts").textContent = String(allProducts.length);
+  $("stSoon").textContent = String(info.filter((w) => w.left >= 0 && w.left <= 90).length);
+  $("stEnded").textContent = String(info.filter((w) => w.left < 0).length);
+  const total = allProducts.reduce((sum, p) => sum + (Number(p.price) || 0), 0);
+  let text = rupees(total);
+  try { text = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", notation: "compact", maximumFractionDigits: 1 }).format(total); } catch (e) {}
+  $("stValue").textContent = text;
+  $("stValue").title = rupees(total);
+}
+
+function updateBanner() {
+  const urgent = allProducts
+    .map((p) => ({ p, w: warrantyOf(p) }))
+    .filter((x) => x.w.left >= 0 && x.w.left <= 30)
+    .sort((a, b) => a.w.left - b.w.left)[0];
+
+  if (!urgent || dismissedBanner === urgent.p.id) { $("banner").hidden = true; return; }
+
+  const days = urgent.w.left;
+  $("bannerText").textContent = `${urgent.p.name}'s warranty ends ${days === 0 ? "today" : days === 1 ? "tomorrow" : "in " + days + " days"}.`;
+  $("bannerDetails").onclick = () => openDetail(urgent.p);
+  $("bannerClaim").onclick = () => fillInput(`Draft a warranty claim for my ${urgent.p.name} (product ${urgent.p.id}). The issue is: `);
+  $("bannerClose").onclick = () => { dismissedBanner = urgent.p.id; $("banner").hidden = true; };
+  $("banner").hidden = false;
+}
+
+function makeCard(p) {
+  const w = warrantyOf(p);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "card";
+  button.setAttribute("aria-label", `${p.name}. Open details.`);
+
+  const ring = document.createElement("span");
+  ring.className = "ring" + (w.left < 0 ? " ended" : "");
+  ring.style.setProperty("--p", w.fraction);
+  ring.style.setProperty("--c", w.colour);
+
+  const big = document.createElement("b");
+  const small = document.createElement("i");
+  if (w.left < 0) { big.textContent = "Ended"; }
+  else if (w.left >= 365) { big.textContent = (w.left / 365).toFixed(1); small.textContent = "years"; }
+  else { big.textContent = String(w.left); small.textContent = "days"; }
+  ring.append(big, small);
+
+  const meta = document.createElement("span");
+  meta.className = "meta";
+  const name = document.createElement("strong");
+  name.textContent = p.name;
+  const sub = document.createElement("small");
+  sub.textContent = `${p.brand} · ${w.left < 0 ? "ended" : "ends"} ${prettyDate(w.expiry)}`;
+  meta.append(name, sub);
+
+  button.append(ring, meta);
+  button.addEventListener("click", () => openDetail(p));
+  return { node: button, left: w.left };
+}
+
+function renderCards() {
+  const q = query.trim().toLowerCase();
+  const list = allProducts.filter((p) => {
+    const w = warrantyOf(p);
+    if (filter === "soon" && !(w.left >= 0 && w.left <= 90)) return false;
+    if (filter === "ended" && !(w.left < 0)) return false;
+    return !q || `${p.name} ${p.brand} ${p.category || ""}`.toLowerCase().includes(q);
+  });
+
+  if (!allProducts.length) { cardsBox.replaceChildren(note("No products yet. Use Add product, or type: Add a product.")); return; }
+  if (!list.length) { cardsBox.replaceChildren(note("No products match.")); return; }
+
+  const cards = list.map(makeCard);
+  cards.sort((a, b) => (a.left < 0) - (b.left < 0) || a.left - b.left);
+  cardsBox.replaceChildren(...cards.map((c) => c.node));
+}
+
+function setFilter(value) {
+  filter = value;
+  document.querySelectorAll(".filter").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.filter === value)));
+  renderCards();
+}
+
+document.querySelectorAll(".filter, .stat[data-filter]").forEach((b) => b.addEventListener("click", () => setFilter(b.dataset.filter)));
+$("search").addEventListener("input", (e) => { query = e.target.value; renderCards(); });
+
+function showSkeletons() {
+  cardsBox.replaceChildren(...[0, 1, 2].map(() => { const d = document.createElement("div"); d.className = "card skel"; return d; }));
+}
+
+async function loadProducts() {
+  try {
+    const res = await fetch("/api/products");
+    if (!res.ok) throw new Error("bad status");
+    const data = await res.json();
+    allProducts = data.products || [];
+    updateStats();
+    updateBanner();
+    renderCards();
+  } catch (e) {
+    cardsBox.replaceChildren(note("Couldn't load your products. They will appear after the next reply."));
+  }
+}
+
+async function checkHealth() {
+  try {
+    const res = await fetch("/api/health");
+    const data = await res.json();
+    led.className = "led " + (data.ready ? "on" : "");
+    statusText.textContent = data.ready ? "Online" : "Starting up";
+  } catch (e) {
+    led.className = "led off";
+    statusText.textContent = "Offline";
+  }
+}
+
+/* =========================================================
+   Product detail panel
+   ========================================================= */
+function fact(dl, label, value) {
+  if (value === null || value === undefined || value === "") return;
+  const dt = document.createElement("dt"); dt.textContent = label;
+  const dd = document.createElement("dd"); dd.textContent = String(value);
+  dl.append(dt, dd);
+}
+
+function fillInput(text) {
+  if (detail.open) detail.close();
+  if (input.disabled) { showToast(awaitingApproval ? "Approve or cancel the pending action first." : "One moment, I'm still replying."); return; }
+  input.value = text;
+  input.focus();
+  input.setSelectionRange(text.length, text.length);
+}
+
+function openDetail(p) {
+  const w = warrantyOf(p);
+  $("dTitle").textContent = p.name;
+  $("dSub").textContent = [p.brand, p.category].filter(Boolean).join(" · ");
+
+  const elapsed = w.left < 0 ? 1 : 1 - w.fraction;
+  const pct = Math.round(elapsed * 100);
+  const tl = document.createElement("div");
+  tl.style.setProperty("--c", w.colour);
+  tl.innerHTML = `<div class="tl"><div class="tl-fill" style="width:${pct}%"></div><div class="tl-dot" style="left:${pct}%"></div></div>`;
+  const labels = document.createElement("div");
+  labels.className = "tl-labels";
+  const l1 = document.createElement("span"); l1.textContent = "Bought " + prettyDate(p.purchaseDate);
+  const l2 = document.createElement("span"); l2.textContent = (w.left < 0 ? "Ended " : "Ends ") + prettyDate(w.expiry);
+  labels.append(l1, l2);
+  const status = document.createElement("p");
+  status.className = "tl-status";
+  status.style.setProperty("--c", w.colour);
+  status.textContent = w.left < 0 ? `Warranty ended ${-w.left} days ago` : w.left === 0 ? "Warranty ends today" : `${w.left} days of warranty left`;
+  $("dTimeline").replaceChildren(tl, labels, status);
+
+  const facts = $("dFacts");
+  facts.replaceChildren();
+  fact(facts, "Price", rupees(p.price));
+  fact(facts, "Warranty", `${p.warrantyMonths} months`);
+  fact(facts, "Model", p.modelNumber);
+  fact(facts, "Serial", p.serialNumber);
+  fact(facts, "Notes", p.notes);
+  fact(facts, "Product ID", p.id);
+
+  const tag = `my ${p.name} (product ${p.id})`;
+  const actions = [
+    { label: "Warranty status", send: `Check the warranty for ${tag}.` },
+    { label: "Maintenance due", send: `What maintenance is due for ${tag}?` },
+    { label: "Repair or replace?", send: `Should I repair or replace ${tag}?` },
+    { label: "Service history", send: `Show the service history for ${tag}.` },
+    { label: "Troubleshoot a problem", fill: `${tag[0].toUpperCase() + tag.slice(1)} has a problem: ` },
+    { label: "Draft warranty claim", fill: `Draft a warranty claim for ${tag}. The issue is: ` },
+    { label: "Book a service slot", fill: `Show available service slots for ${tag} on ` }
+  ];
+  $("dActions").replaceChildren(...actions.map((a) => {
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "act"; btn.textContent = a.label;
+    btn.addEventListener("click", () => {
+      if (a.send) { detail.close(); sendText(a.send); } else fillInput(a.fill);
+    });
+    return btn;
+  }));
+
+  detail.showModal();
+}
+
+$("dClose").addEventListener("click", () => detail.close());
+detail.addEventListener("click", (e) => { if (e.target === detail) detail.close(); });
+
+/* =========================================================
+   Add-product form (it only fills the chat; approval still applies)
+   ========================================================= */
+function openAdd() {
+  $("addForm").reset();
+  $("addForm").elements.date.max = todayISO();
+  addDlg.showModal();
+}
+$("addBtn").addEventListener("click", openAdd);
+$("aClose").addEventListener("click", () => addDlg.close());
+$("aCancel").addEventListener("click", () => addDlg.close());
+addDlg.addEventListener("click", (e) => { if (e.target === addDlg) addDlg.close(); });
+
+$("addForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const f = $("addForm").elements;
+  let text = `Add a product: ${f.name.value.trim()}, brand ${f.brand.value.trim()}, category ${f.category.value}, ` +
+             `bought on ${f.date.value}, price ${f.price.value} rupees, warranty ${f.months.value} months`;
+  if (f.model.value.trim()) text += `, model number ${f.model.value.trim()}`;
+  if (f.serial.value.trim()) text += `, serial number ${f.serial.value.trim()}`;
+  addDlg.close();
+  sendText(text);
+});
+
+/* =========================================================
+   Chat
+   ========================================================= */
+function scrollDown() { log.scrollTop = log.scrollHeight; }
+
+function addMessage(role, text) {
+  transcript.push({ role, text, at: new Date() });
+  const row = document.createElement("div");
+  row.className = "msg " + role;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
+
+  if (role === "assistant") {
+    const col = document.createElement("div");
+    col.className = "col";
+    const copy = document.createElement("button");
+    copy.type = "button"; copy.className = "copy"; copy.textContent = "Copy";
+    copy.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(text); showToast("Copied"); }
+      catch (e) { showToast("Couldn't copy. Select the text instead."); }
+    });
+    col.append(bubble, copy);
+    row.appendChild(col);
+  } else {
+    row.appendChild(bubble);
+  }
+  log.appendChild(row);
+  scrollDown();
+}
+
+function addTyping() {
+  const row = document.createElement("div");
+  row.className = "msg assistant";
+  row.innerHTML = '<div class="bubble typing" aria-label="Assistant is typing"><i></i><i></i><i></i></div>';
+  log.appendChild(row);
+  scrollDown();
+  return row;
+}
+
+function updateControls() {
+  const locked = busy || awaitingApproval;
+  input.disabled = locked;
+  sendBtn.disabled = locked;
+  micBtn.disabled = locked && !recording;
+  input.placeholder = awaitingApproval ? "Approve or cancel above" : "Ask about a product, warranty or service";
+  refreshOrb();
+}
+
+const humanize = (key) => key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
+
+function addApprovalSlip(action) {
+  transcript.push({ role: "assistant", text: `Approval requested: ${action.name.replaceAll("_", " ")} (${Object.entries(action.details || {}).map(([k, v]) => `${k}: ${v}`).join(", ")})`, at: new Date() });
+
+  const row = document.createElement("div");
+  row.className = "msg assistant";
+  const slip = document.createElement("div");
+  slip.className = "slip";
+
+  const head = document.createElement("div");
+  head.className = "slip-head";
+  head.innerHTML = '<span class="led" aria-hidden="true"></span><span>Approval needed</span>';
+
+  const what = document.createElement("div");
+  what.className = "slip-action";
+  what.textContent = action.name.replaceAll("_", " ");
+
+  const list = document.createElement("dl");
+  Object.entries(action.details || {}).forEach(([key, value]) => {
+    const dt = document.createElement("dt"); dt.textContent = humanize(key);
+    const dd = document.createElement("dd"); dd.textContent = typeof value === "object" ? JSON.stringify(value) : String(value);
+    list.append(dt, dd);
+  });
+
+  const btns = document.createElement("div");
+  btns.className = "slip-btns";
+  const approve = document.createElement("button");
+  approve.type = "button"; approve.className = "btn primary"; approve.textContent = "Approve";
+  const cancel = document.createElement("button");
+  cancel.type = "button"; cancel.className = "btn"; cancel.textContent = "Cancel";
+  btns.append(approve, cancel);
+
+  function resolve(choice) {
+    approve.disabled = cancel.disabled = true;
+    awaitingApproval = false;
+    slip.classList.add(choice === "approve" ? "done" : "cancelled");
+    const result = document.createElement("p");
+    result.className = "slip-result";
+    result.textContent = choice === "approve" ? "Approved" : "Cancelled";
+    btns.replaceWith(result);
+    transcript.push({ role: "user", text: choice === "approve" ? "Approved the action." : "Cancelled the action.", at: new Date() });
+    callApi({ approval: choice });
+  }
+  approve.addEventListener("click", () => resolve("approve"));
+  cancel.addEventListener("click", () => resolve("cancel"));
+
+  slip.append(head, what, list, btns);
+  row.appendChild(slip);
+  log.appendChild(row);
+  scrollDown();
+  approve.focus();
+}
+
+function speak(text) {
+  if (!text || !("speechSynthesis" in window) || !(speakChk.checked || lastWasVoice)) return;
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = langSel.value;
+  utterance.onstart = () => { speaking = true; refreshOrb(); };
+  utterance.onend = utterance.onerror = () => { speaking = false; refreshOrb(); };
+  speechSynthesis.speak(utterance);
+}
+
+stopBtn.addEventListener("click", () => {
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  speaking = false;
+  refreshOrb();
+});
+
+async function callApi(body) {
+  busy = true;
+  updateControls();
+  const typing = addTyping();
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, sessionId })
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (data.sessionId) {
+      sessionId = data.sessionId;
+      try { sessionStorage.setItem("pca-session", sessionId); } catch (e) {}
+    }
+
+    typing.remove();
+    const reply = data.reply || "Something went wrong. Please try again.";
+    addMessage("assistant", reply);
+    busy = false;
+
+    if (data.approvalRequired && data.action) {
+      awaitingApproval = true;
+      addApprovalSlip(data.action);
+    }
+    speak(reply);
+    if (body.approval === "approve") loadProducts();
+  } catch (error) {
+    typing.remove();
+    addMessage("assistant", "I couldn't reach the server. Check your connection and try again.");
+  } finally {
+    busy = false;
+    updateControls();
+    if (!awaitingApproval) input.focus();
+  }
+}
+
+function sendText(text, viaVoice = false) {
+  const clean = text.trim();
+  if (!clean) return;
+  if (busy || awaitingApproval) {
+    showToast(awaitingApproval ? "Approve or cancel the pending action first." : "One moment, I'm still replying.");
+    return;
+  }
+  lastWasVoice = viaVoice;
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  addMessage("user", clean);
+  input.value = "";
+  callApi({ message: clean });
+}
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  sendText(input.value);
+});
+
+/* Chat tools: new chat, save chat */
+function addWelcome() {
+  addMessage("assistant", "Hi, I'm your Product Care Assistant. I can track warranties, help troubleshoot a problem, book a service slot and remind you about maintenance. What would you like to do?");
+}
+
+$("newChat").addEventListener("click", () => {
+  if (busy) { showToast("Wait for the current reply first."); return; }
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  speaking = false;
+  sessionId = null;
+  try { sessionStorage.removeItem("pca-session"); } catch (e) {}
+  awaitingApproval = false;
+  transcript.length = 0;
+  log.replaceChildren();
+  addWelcome();
+  updateControls();
+  input.focus();
+});
+
+$("exportChat").addEventListener("click", () => {
+  const time = (d) => d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+  const lines = transcript.map((t) => `[${time(t.at)}] ${t.role === "user" ? "You" : "Assistant"}: ${t.text}`);
+  const blob = new Blob([lines.join("\n\n") + "\n"], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "product-care-chat.txt";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  showToast("Chat saved");
+});
+
+[
+  { label: "What needs my attention?", text: "What needs my attention?" },
+  { label: "Show my products", text: "Show all my registered products." },
+  { label: "Warranties ending soon", text: "Which warranties expire soon?" },
+  { label: "Add a product", open: true }
+].forEach((chip) => {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "chip";
+  button.textContent = chip.label;
+  button.addEventListener("click", () => { if (chip.open) openAdd(); else sendText(chip.text); });
+  chipsBox.appendChild(button);
+});
+
+/* Keyboard: "/" jumps to the message box */
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || document.querySelector("dialog[open]")) return;
+  e.preventDefault();
+  input.focus();
+});
+
+/* Voice input */
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognizer = null;
+if (!Recognition) {
+  micBtn.hidden = true;
+} else {
+  micBtn.addEventListener("click", () => {
+    if (recognizer) { recognizer.stop(); return; }
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    recognizer = new Recognition();
+    recognizer.lang = langSel.value;
+    recognizer.interimResults = true;
+    recognizer.onresult = (event) => {
+      input.value = Array.from(event.results).map((r) => r[0].transcript).join("");
+    };
+    recognizer.onend = () => {
+      recognizer = null;
+      recording = false;
+      micBtn.classList.remove("live");
+      refreshOrb();
+      if (input.value.trim()) sendText(input.value, true);
+    };
+    recognizer.onerror = () => {};
+    recording = true;
+    micBtn.classList.add("live");
+    refreshOrb();
+    recognizer.start();
+  });
+}
+
+addWelcome();
+updateControls();
+showSkeletons();
+checkHealth();
+loadProducts();
+</script>
+</body>
+</html>

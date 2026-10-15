@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+      "my-first-mcp-server": {
+        "command": "node",
+        "args": ["${workspaceFolder}/server.js"]
+      }
+    }
+  }
