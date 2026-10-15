@@ -193,15 +193,21 @@
 
   // Keyboard shortcut: Esc or Space to skip immediately
   window.addEventListener("keydown", (e) => {
-    if (!isDismissed && (e.key === "Escape" || e.code === "Space")) {
+    if (!isDismissed && (e.key === "Escape" || e.code === "Space" || e.key === "Enter")) {
       e.preventDefault();
       dismissIntro();
     }
   });
 
   if (skipBtn) {
-    skipBtn.addEventListener("click", () => dismissIntro());
+    skipBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dismissIntro();
+    });
   }
+
+  // Clicking anywhere on the intro overlay dismisses it instantly
+  overlay.addEventListener("click", () => dismissIntro());
 
   // Animation render loop
   function render(timestamp) {

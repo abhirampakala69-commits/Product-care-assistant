@@ -175,7 +175,8 @@ a {
 
 #intro-overlay.dismissed {
   opacity: 0;
-  pointer-events: none;
+  pointer-events: none !important;
+  display: none !important;
   transform: scale(1.04);
 }
 

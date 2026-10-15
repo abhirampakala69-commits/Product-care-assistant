@@ -1504,8 +1504,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <div>
                 <strong style="color: #fff; font-size: 0.95rem;">${t.task}</strong>
-                <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">${t.productName || "Product"} · Every ${t.intervalMonths} months</p>
-                <small style="color: ${isOverdue ? "var(--danger)" : "var(--warn)}; font-weight: 700;">
+                <small style="color: ${isOverdue ? 'var(--danger)' : 'var(--warn)'}; font-weight: 700;">
                   ${isOverdue ? `Overdue by ${-t.daysUntilDue} days` : `Due in ${t.daysUntilDue} days (${t.nextDueDate})`}
                 </small>
               </div>
@@ -1669,6 +1668,9 @@
   // Public Global Helpers for Inline Callbacks
   // ---------------------------------------------------------------------------
   window.CareOrbit = {
+    openTab(tabId) {
+      switchTab(tabId);
+    },
     openDrawerById(id) {
       const prod = state.products.find((p) => String(p.id) === String(id));
       if (prod) openProductDrawer(prod);
