@@ -33,7 +33,7 @@ if (!GEMINI_API_KEY) {
 }
 
 // Tried in order; if one is busy or gone, the next is used.
-const models = (process.env.GEMINI_MODELS || "gemini-3.5-flash,gemini-3.5-flash-lite")
+const models = (process.env.GEMINI_MODELS || "gemini-flash-lite-latest,gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-3.8-flash,gemini-3.5-flash")
   .split(",")
   .map((model) => model.trim())
   .filter(Boolean);
@@ -405,6 +405,98 @@ app.get("/api/products", rateLimit, async (_req, res) => {
     res.json({ products: Array.isArray(data.products) ? data.products : [] });
   } catch {
     res.status(502).json({ products: [], error: "Could not read products." });
+  }
+});
+
+// Provides care overview summary (totals, expiring warranties, open requests, upcoming appointments, maintenance)
+app.get("/api/care-summary", rateLimit, async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!ready) return res.status(503).json({ error: "Starting up." });
+
+  const out = await runTool("get_care_summary", {});
+  if (out.error) return res.status(502).json({ error: "Could not load care summary." });
+
+  try {
+    const data = JSON.parse(out.result);
+    res.json(data);
+  } catch {
+    res.status(502).json({ error: "Could not parse care summary." });
+  }
+});
+
+// Feeds service requests list
+app.get("/api/service-requests", rateLimit, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!ready) return res.status(503).json({ serviceRequests: [], error: "Starting up." });
+
+  const productId = req.query.productId ? Number(req.query.productId) : undefined;
+  const out = await runTool("get_service_requests", productId ? { productId } : {});
+  if (out.error) return res.status(502).json({ serviceRequests: [], error: "Could not load requests." });
+
+  try {
+    const data = JSON.parse(out.result);
+    res.json({ serviceRequests: Array.isArray(data.serviceRequests) ? data.serviceRequests : [] });
+  } catch {
+    res.status(502).json({ serviceRequests: [], error: "Could not read service requests." });
+  }
+});
+
+// Feeds maintenance tasks
+app.get("/api/maintenance", rateLimit, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!ready) return res.status(503).json({ tasks: [], error: "Starting up." });
+
+  const daysAhead = req.query.daysAhead ? Number(req.query.daysAhead) : 60;
+  const productId = req.query.productId ? Number(req.query.productId) : undefined;
+  const args = { daysAhead };
+  if (productId) args.productId = productId;
+
+  const out = await runTool("get_maintenance_due", args);
+  if (out.error) return res.status(502).json({ tasks: [], error: "Could not load maintenance." });
+
+  try {
+    const data = JSON.parse(out.result);
+    res.json({ tasks: Array.isArray(data.tasks) ? data.tasks : [] });
+  } catch {
+    res.status(502).json({ tasks: [], error: "Could not read maintenance." });
+  }
+});
+
+// Feeds service history
+app.get("/api/service-history", rateLimit, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!ready) return res.status(503).json({ serviceHistory: [], error: "Starting up." });
+
+  const productId = req.query.productId ? Number(req.query.productId) : undefined;
+  const out = await runTool("get_service_history", productId ? { productId } : {});
+  if (out.error) return res.status(502).json({ serviceHistory: [], error: "Could not load history." });
+
+  try {
+    const data = JSON.parse(out.result);
+    res.json({ serviceHistory: Array.isArray(data.serviceHistory) ? data.serviceHistory : [] });
+  } catch {
+    res.status(502).json({ serviceHistory: [], error: "Could not read history." });
+  }
+});
+
+// Checks available slots for an appointment
+app.get("/api/slots", rateLimit, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!ready) return res.status(503).json({ slots: [], error: "Starting up." });
+
+  const { productId, date } = req.query;
+  if (!productId || !date) {
+    return res.status(400).json({ error: "Missing productId or date." });
+  }
+
+  const out = await runTool("get_available_slots", { productId: Number(productId), date: String(date) });
+  if (out.error) return res.status(502).json({ slots: [], error: out.error });
+
+  try {
+    const data = JSON.parse(out.result);
+    res.json(data);
+  } catch {
+    res.status(502).json({ slots: [], error: "Could not read available slots." });
   }
 });
 

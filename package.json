@@ -4,9 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node webchat.js",
+    "server": "node server.js",
+    "agent": "node agent.js",
     "build:ui": "vite build",
     "build": "npm run build:ui",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test-supabase.js && node test-gemini.js"
   },
   "keywords": [],
   "author": "",

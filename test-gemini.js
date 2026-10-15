@@ -8,7 +8,7 @@ const ai = new GoogleGenAI({
 
 async function main() {
     const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-flash-lite-latest",
         contents: "Reply with exactly: Gemini connection successful!"
     });
 
