@@ -108,6 +108,7 @@ function statusOf(error) {
   if (/RESOURCE_EXHAUSTED|quota|rate limit/i.test(message)) return 429;
   if (/NOT_FOUND/i.test(message)) return 404;
   if (/API key|PERMISSION_DENIED|UNAUTHENTICATED/i.test(message)) return 401;
+  if (/DEADLINE_EXCEEDED|timed out|timeout|abort/i.test(message)) return 504;
   return 0;
 }
 
@@ -141,7 +142,7 @@ async function generate(contents) {
         console.log(`[gemini] ${models[i]} failed (${status || String(error.message).slice(0, 80)}) after ${Date.now() - started}ms`);
 
         // Anything other than busy / quota / missing model will not fix itself.
-        if (![429, 500, 503, 404].includes(status)) throw error;
+        if (![429, 500, 503, 504, 404].includes(status)) throw error;
       }
     }
     if (round === 0) await sleep(1500);
@@ -378,15 +379,15 @@ app.post("/api/chat", rateLimit, async (req, res) => {
     // Forget the failed turn so the next message starts from a clean history.
     session.contents.length = session.turnStart;
     session.pending = null;
-
     const status = statusOf(error);
     const reply =
       status === 503 || status === 429
         ? "Gemini is busy right now. Please try again in a minute."
-        : status === 401
-          ? "Gemini rejected the API key. Check GEMINI_API_KEY on the server."
-          : "The assistant ran into an error. Please try again.";
-
+        : status === 504
+          ? "That is taking longer than usual. Please try again."
+          : status === 401
+            ? "Gemini rejected the API key. Check GEMINI_API_KEY on the server."
+            : "The assistant ran into an error. Please try again.";
     res.status(500).json({ sessionId: id, reply });
   }
 });
